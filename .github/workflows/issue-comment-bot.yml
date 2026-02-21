@@ -1,0 +1,38 @@
+name: Issue Comment Bot
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  issues: write
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if label matches and comment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LABEL="${{ github.event.label.name }}"
+          ISSUE_NUMBER="${{ github.event.issue.number }}"
+          OWNER="${{ github.repository_owner }}"
+          REPO="${{ github.event.repository.name }}"
+
+          if [ "$LABEL" = "feature" ]; then
+            COMMENT="Thank you for the feature request. We will consider including this in a future release."
+          elif [ "$LABEL" = "enhancement" ]; then
+            COMMENT="Thanks for the enhancement suggestion! We appreciate your input."
+          elif [ "$LABEL" = "completed" ]; then
+            COMMENT="This issue has been resolved. Thank you for your contribution!"
+          else
+            echo "Label not configured for auto-comment: $LABEL"
+            exit 0
+          fi
+
+          curl -s -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/$OWNER/$REPO/issues/$ISSUE_NUMBER/comments \
+            -d "{\"body\": \"$COMMENT\"}"
